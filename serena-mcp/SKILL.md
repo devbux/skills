@@ -128,7 +128,8 @@ marketplace** — those carry outdated and suboptimal installation commands.
 
 ### Prerequisites, install & initialise
 ```bash
-# 1. Install uv (if not already installed)
+# 1. Install uv (if not already installed) — via the installer script,
+#    or your package manager: brew install uv on macOS, pip install uv otherwise
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 2. Install Serena locally (places binary in ~/.local/bin/serena)

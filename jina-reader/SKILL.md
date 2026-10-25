@@ -24,15 +24,17 @@ tools; the filtered endpoint most users want is
 
 ## 1. The core workflow: search, then read
 
-Search tools return **titles, URLs, and snippets — not page content**. They
-cannot be used alone: always follow with `read_url` on the result URLs. One
-`read_url` call takes up to 5 URLs at once.
+**Reading is the focus of this skill.** Search exists here to find URLs worth
+reading: search tools return **titles, URLs, and snippets — not page
+content**, and cannot be used alone. Always follow with `read_url` on the
+result URLs. One `read_url` call takes up to 5 URLs at once.
 
-- Have a URL, need its content → `read_url`.
+- Have a URL, need its content → `read_url` (§2A, the detailed section).
 - Need to discover URLs → `search_web` (general), `search_arxiv` (papers),
   `search_ssrn` (social science / economics / law / finance),
   `search_images` (images, one query at a time), `search_jina_blog` (Jina news
-  and blog posts, no API key needed).
+  and blog posts, no API key needed). These are covered compactly in §2B–§2C;
+  the depth of this skill goes to reading.
 
 ---
 
@@ -57,31 +59,24 @@ run concurrently in a single round trip.
 A question-grounded read gets a 60-second budget against 30 seconds for a plain
 read (chunking and reranking run after the fetch).
 
-### B. `search_web` (Web Search) — API key required
+### B. Search tools (compact — they exist to feed `read_url`)
 
-Searches the web; returns titles, URLs, and engine snippets. `query` takes one
-query or an **array of up to 5**, run concurrently. Always follow with
-`read_url` on the URLs you pick.
+`search_web` (API key required): searches the web, returns titles, URLs, and
+engine snippets; `query` takes one query or an **array of up to 5**, run
+concurrently. `search_arxiv` (papers, key required) and `search_ssrn` (social
+science / economics / law / finance, key required) work the same way.
+`search_images` (key required) takes one query at a time, no arrays.
+`search_jina_blog` (no key) searches Jina AI news and blog posts. Always follow
+any of these with `read_url` on the URLs you pick.
 
-### C. The other tools on the filtered endpoint
-
-| Tool | Key required | Notes |
-| --- | --- | --- |
-| `capture_screenshot_url` | Optional | Captures a screenshot of a page; returns a base64 PNG. |
-| `search_arxiv` | Yes | Academic papers and preprints on arXiv. |
-| `search_ssrn` | Yes | Papers on SSRN. |
-| `search_images` | Yes | Image search; one query at a time (no arrays). |
-| `search_jina_blog` | No | Jina AI news and blog posts. The only search tool that works without a key. |
-
-### D. Beyond the filtered endpoint
-
-The unfiltered server also has `primer` (current contextual information, no
-key), `guess_datetime_url` (page publish / last-update datetime with a
-confidence score, no key), `extract_pdf` (figures, tables, and equations from
-PDFs, key required), `sort_by_relevance` (reranking, key required), and
-`deduplicate_strings` (semantically unique strings, key required). If you need
-only reading and search, the filtered endpoint in §4 keeps these out of your
-tool list entirely.
+`capture_screenshot_url` (key optional) captures a screenshot of a page and
+returns a base64 PNG. Beyond the filtered endpoint, the unfiltered server also
+has `primer` (current contextual information, no key), `guess_datetime_url`
+(page publish / last-update datetime with a confidence score, no key),
+`extract_pdf` (figures, tables, equations from PDFs, key required),
+`sort_by_relevance` (reranking, key required), and `deduplicate_strings`
+(semantically unique strings, key required) — the filtered endpoint in §4
+keeps these out of your tool list entirely.
 
 ---
 
@@ -152,39 +147,10 @@ tool list entirely.
 ```
 
 Omit the `headers` block if unauthenticated (reads only). Clients without
-native remote-MCP support need the `mcp-remote` local proxy instead:
-
-```json
-{
-  "mcpServers": {
-    "jina-mcp-server": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://mcp.jina.ai/v1?include_tags=search,read",
-        "--header",
-        "Authorization: Bearer ${JINA_API_KEY}"
-      ]
-    }
-  }
-}
-```
-
-### VS Code (`.vscode/mcp.json`, native schema)
-
-```json
-{
-  "servers": {
-    "jina-mcp-server": {
-      "type": "http",
-      "url": "https://mcp.jina.ai/v1?include_tags=search,read",
-      "headers": {
-        "Authorization": "Bearer ${input:jinaApiKey}"
-      }
-    }
-  }
-}
-```
+native remote-MCP support use the `mcp-remote` local proxy instead: same
+block, but with `"command": "npx"` and `args` of `mcp-remote`, the URL, and
+the `--header` argument. VS Code (`.vscode/mcp.json`): the same JSON under
+`"servers"` with `"type": "http"` added.
 
 ### Claude Code CLI
 
