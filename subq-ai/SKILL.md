@@ -45,14 +45,14 @@ Integrations work best when Snap provides calibrated judgments and your applicat
 
 ## 2. Question Primitives
 
-Snap supports four core question types:
+Snap supports three typed question types, plus a batch tool that evaluates several questions over one shared state:
 
 | Question Type | Output Shape | When to Use |
 | --- | --- | --- |
 | **`noul`** | Boolean probability `[0.0, 1.0]` | Verifying whether a specific assertion is true (e.g. invariant compliance, bug presence, security leak). |
 | **`choice`** | Categorical distribution over named options | Picking the best option among mutually exclusive candidates (e.g. error categorization, intent routing). |
 | **`score`** | Graded score along defined discrete levels | Evaluating qualitative levels (e.g. code readability 1–5, test thoroughness, accessibility conformance). |
-| **`decide`** | Structured multi-question batch | Evaluating multiple interrelated questions over the same shared state in a single request. |
+| **`decide`** (batch tool, not a question type) | Multiple typed answers in one response | Evaluating multiple interrelated questions over the same shared state in a single request. |
 
 ### Calibrated Probabilities & Thresholds
 - **Noul Thresholds**:
@@ -71,7 +71,7 @@ Snap's 384K context window allows passing entire pull request diffs, multiple re
 - Include test files alongside implementation diffs to verify test coverage matches modified code.
 
 ### B. Visual Multimodal Comparison (Up to 4 Images)
-Snap accepts up to 4 base64-encoded image URIs (`data:image/png;base64,...`) within its evaluation state:
+Images travel as a separate top-level `images` parameter on any tool call, not embedded in the state: an array of up to 4 objects of the form `{ "mediaType": "image/png" | "image/jpeg" | "image/webp", "base64": "..." }`, with plain base64 and no `data:` prefix. Each image must decode to at most 4 MiB, 8 MiB in total, and every question in the request sees every image:
 - **Visual Regression**: Compare `baseline_screenshot` against `candidate_screenshot`.
 - **Figma to Code Verification**: Compare `design_mockup` against `rendered_component`.
 - **State Progression**: Compare initial state, loading skeleton, and populated UI.
@@ -86,7 +86,7 @@ When using the SubQ Snap MCP server (`@devbux/subq-snap-mcp`), the following too
 ```json
 {
   "state": "git diff or source code string...",
-  "question": "Does this diff introduce any memory leaks or uncleaned event listeners?",
+  "instructions": "Does this diff introduce any memory leaks or uncleaned event listeners?",
   "criteria": {
     "true": "An event listener, timer, or subscription is registered without cleanup on unmount.",
     "false": "All subscriptions and listeners are properly deregistered in cleanup callbacks."
@@ -98,7 +98,7 @@ When using the SubQ Snap MCP server (`@devbux/subq-snap-mcp`), the following too
 ```json
 {
   "state": "diff or error log...",
-  "question": "Which category best describes the regression in this changeset?",
+  "instructions": "Which category best describes the regression in this changeset?",
   "options": {
     "syntax_error": "Static syntax, typing, or compilation breakage.",
     "race_condition": "Asynchronous state mutation without proper locking or ordering.",
@@ -107,20 +107,22 @@ When using the SubQ Snap MCP server (`@devbux/subq-snap-mcp`), the following too
   }
 }
 ```
+`options` is an object mapping each option label to its description (2–255 options).
 
 ### 3. `snap_score` (Multi-Level Graded Evaluation)
 ```json
 {
   "state": "unit test file contents...",
-  "question": "Rate the thoroughness of edge-case coverage in this test suite.",
-  "levels": {
-    "1": "Only happy path tested with trivial mocks.",
-    "2": "Tests standard success and one basic error branch.",
-    "3": "Tests multiple error branches and boundary inputs.",
-    "4": "Thoroughly tests concurrent calls, null/undefined states, and failure recovery."
-  }
+  "instructions": "Rate the thoroughness of edge-case coverage in this test suite.",
+  "levels": [
+    "Only happy path tested with trivial mocks.",
+    "Tests standard success and one basic error branch.",
+    "Tests multiple error branches and boundary inputs.",
+    "Thoroughly tests concurrent calls, null/undefined states, and failure recovery."
+  ]
 }
 ```
+`levels` is an ordered array of level descriptions, lowest to highest (2–10 levels). The returned score is probability-weighted, so it can fall between levels.
 
 ### 4. `snap_decide` (Batch Decision Matrix)
 Evaluates multiple questions against a single shared state efficiently in one parallel pass:
@@ -143,21 +145,25 @@ Evaluates multiple questions against a single shared state efficiently in one pa
 }
 ```
 
-### 5. Multimodal Visual Comparison Request Example
+### 5. `snap_list_models` (Available Models)
+Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.1`; note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
+
+### 6. Multimodal Visual Comparison Request Example
+A `snap_noul` call with images as a top-level parameter (plain base64, no `data:` prefix; up to 4 images, 4 MiB each, 8 MiB total):
 ```json
 {
   "state": {
-    "description": "Visual regression comparison for modal dialog on dark mode",
-    "images": [
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-    ]
+    "description": "Visual regression comparison for modal dialog on dark mode"
   },
-  "question": "Does Image 2 match the design layout and contrast specifications of Image 1 without visual clipping?",
+  "instructions": "Does Image 2 match the design layout and contrast specifications of Image 1 without visual clipping?",
   "criteria": {
     "true": "Layout, typography, padding, and contrast in Image 2 match Image 1 cleanly without clipping.",
     "false": "There is noticeable layout shift, incorrect contrast, or clipped content in Image 2."
-  }
+  },
+  "images": [
+    { "mediaType": "image/png", "base64": "iVBORw0KGgoAAAANSUhEUgAA..." },
+    { "mediaType": "image/png", "base64": "iVBORw0KGgoAAAANSUhEUgAA..." }
+  ]
 }
 ```
 
