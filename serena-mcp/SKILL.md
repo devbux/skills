@@ -126,6 +126,26 @@ is GPL-3.0-or-later (its SolidLSP component is MIT); this skill file is MIT
 like the rest of this repo. **Do not install Serena via an MCP or plugin
 marketplace** — those carry outdated and suboptimal installation commands.
 
+### Dashboard: keep it silent
+
+Serena opens the dashboard window by default on every start — a browser tab
+popping open each time an agent starts is not what users want, since only
+agents use Serena. **Every command below passes
+`--open-web-dashboard=False`** so agents start silently. The dashboard itself
+stays enabled and reachable at `http://localhost:24282/dashboard/index.html`
+or via the `open_dashboard` tool — it just doesn't pop open. (Config-file
+alternative: `web_dashboard_open_on_launch: False` in `serena_config.yml`.)
+
+### Context vs. project: two different flags, both needed
+
+`--context` picks the **toolset**; `--project` / `--project-from-cwd` picks
+the **project**. One does not replace the other — the official Claude Code
+global setup uses both together. `--project-from-cwd` auto-detects the project
+from the working directory (nearest project boundary wins, so launching from
+inside a worktree activates the worktree itself). In global configs without a
+project flag (e.g. Claude Desktop), the project is instead set at session
+start with `activate_project` (see §2).
+
 ### Prerequisites, install & initialise
 ```bash
 # 1. Install uv (if not already installed) — via the installer script,
@@ -153,26 +173,26 @@ The context selects the toolset; omitting it silently loads the default
 Claude Code, global (all projects):
 
 ```bash
-claude mcp add --scope user serena -- serena start-mcp-server --context claude-code --project-from-cwd
+claude mcp add --scope user serena -- serena start-mcp-server --context claude-code --project-from-cwd --open-web-dashboard=False
 ```
 
 Claude Code, per project:
 
 ```bash
-claude mcp add serena -- serena start-mcp-server --context claude-code --project "$(pwd)"
+claude mcp add serena -- serena start-mcp-server --context claude-code --project "$(pwd)" --open-web-dashboard=False
 ```
 
 VS Code, global (then prompt "Activate the current dir as project using
 serena" at session start — VS Code cannot auto-activate in this setting):
 
 ```bash
-serena start-mcp-server --context=vscode
+serena start-mcp-server --context=vscode --open-web-dashboard=False
 ```
 
 VS Code, workspace (auto-activates the open project):
 
 ```bash
-serena start-mcp-server --context=vscode --project ${workspaceFolder}
+serena start-mcp-server --context=vscode --project ${workspaceFolder} --open-web-dashboard=False
 ```
 
 Claude Desktop / other global-config clients (activation required, see §2):
@@ -182,23 +202,25 @@ Claude Desktop / other global-config clients (activation required, see §2):
   "mcpServers": {
     "serena": {
       "command": "serena",
-      "args": ["start-mcp-server", "--context=desktop-app"]
+      "args": ["start-mcp-server", "--context=desktop-app", "--open-web-dashboard=False"]
     }
   }
 }
 ```
 
-IDEs generally (Cursor, Cline, Windsurf): use `--context ide` to reduce tool
-duplication with the IDE's own tools.
+IDEs generally (Cursor, Cline, Windsurf): use `--context ide` (plus
+`--open-web-dashboard=False`) to reduce tool duplication with the IDE's own
+tools.
 
 Starting Serena standalone:
 
 ```bash
-serena start-mcp-server --open-web-dashboard False --project /path/to/project
+serena start-mcp-server --open-web-dashboard=False --project /path/to/project
 ```
 
 If running ephemerally without installing locally, substitute
-`uvx --from git+https://github.com/oraios/serena serena` for `serena`.
+`uvx --from git+https://github.com/oraios/serena serena` for `serena`
+(all flags stay the same).
 
 ### Keep Serena working in long sessions
 
