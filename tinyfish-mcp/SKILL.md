@@ -114,6 +114,8 @@ it returns metadata only.
   `create_browser_session` returns CDP details for Playwright, Puppeteer, or
   Selenium; `list_browser_sessions` filters by session ID, time range, and
   status; `close_browser_session` releases early (idempotent).
+- **Legacy credit plans.** Accounts on legacy credit plans bill 1 credit per
+  step and 1 credit per 4 browser-minutes instead of the dollar rates above.
 - **Wallet.** `get_wallet` is read-only (balance, auto-reload state, contract
   rates, in-flight top-up; auto-reload changes happen in the dashboard).
   `top_up_wallet` adds money over the Machine Payments Protocol (two-call
