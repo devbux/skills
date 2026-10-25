@@ -19,22 +19,22 @@ Install any skill directly into your AI coding agent using `bunx skills`:
 
 ```bash
 # Global installation across all supported AI coding agents
-bunx skills add <owner>/skills --skill jina-reader -g -y
-bunx skills add <owner>/skills --skill tinyfish-mcp -g -y
-bunx skills add <owner>/skills --skill subq-ai -g -y
-bunx skills add <owner>/skills --skill serena-mcp -g -y
+bunx skills add devbux/skills --skill jina-reader -g
+bunx skills add devbux/skills --skill tinyfish-mcp -g
+bunx skills add devbux/skills --skill subq-ai -g
+bunx skills add devbux/skills --skill serena-mcp -g
 
 # Or install all skills from the repository at once
-bunx skills add <owner>/skills -g -y
+bunx skills add devbux/skills -g
 ```
 
 ### Agent-Scoped Installation
 ```bash
 # Scope to Claude Code only
-bunx skills add <owner>/skills --skill jina-reader -a claude-code -y
+bunx skills add devbux/skills --skill jina-reader -a claude-code
 
 # Scope to Cursor only
-bunx skills add <owner>/skills --skill jina-reader -a cursor -y
+bunx skills add devbux/skills --skill jina-reader -a cursor
 ```
 
 ---
