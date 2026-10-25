@@ -5,7 +5,8 @@ description: >
   Language Server Protocol (LSP) backed semantic code intelligence and refactoring using Serena MCP.
   Provides compiler-grade AST symbol exploration, cross-file reference tracking, type diagnostics,
   and atomic, reference-aware refactoring tools (rename_symbol, safe_delete_symbol,
-  replace_symbol_body). Universal across TypeScript, JavaScript, Python, Go, Rust, and C#.
+  replace_symbol_body). Supports 40+ languages; the --context flag selects the toolset
+  per client, so a missing tool usually means disabled-by-context, not breakage.
 ---
 
 # Semantic Code Intelligence with Serena MCP
@@ -24,9 +25,8 @@ Use Serena when semantic symbol awareness provides higher safety and efficiency 
 - 🩺 **Compiler Diagnostics**: Inspecting language-server errors and warnings on touched files (`get_diagnostics_for_file`).
 - 📦 **Token Efficiency**: Reading only the exact symbol body you need (`find_symbol` with `include_body=True`) instead of reading 1,000-line files.
 
-> [!TIP]
-> **Optional Tooling Guideline**:
-> If your AI assistant or development environment already provides fast native AST symbol search and file viewing tools, Serena is strictly optional. Use Serena when native tools lack cross-file symbol graph intelligence or when performing automated cross-file refactorings.
+Scope: use Serena when a task crosses file boundaries or needs reference-aware
+safety; for single-file trivia, native file tools are fine.
 
 ---
 
@@ -35,12 +35,17 @@ Use Serena when semantic symbol awareness provides higher safety and efficiency 
 1. **0-Based Line Indexing**: Line numbers returned by Serena tools are 0-based.
 2. **Name Path Syntax**:
    - Symbols within a file are referenced hierarchically: `Class/method`, `Interface/property`.
-   - Overloaded symbols append an index: `Class/method[0]`, `Class/method[1]`.
-   - Simple search matches any symbol by name; prefix with `/` (e.g. `/Class/method`) for an exact absolute match.
+   - Simple search matches any symbol by name; a relative path matches that path and paths ending in it; prefix with `/` (e.g. `/Class/method`) for an exact absolute match.
+   - `find_symbol` filters: `depth=1` for members only, `substring_matching` for partial names, `include_kinds` / `exclude_kinds` to narrow by symbol kind.
 3. **Internal Serialization & Safe Batching**:
    - Serena executes tool calls sequentially internally. You can safely issue independent tool calls in a single turn without risk of race conditions or data corruption.
-4. **Project Activation**:
-   - Always initialize the project root with `activate_project` and review initial setup via `initial_instructions`.
+4. **Project Activation (only when the context requires it)**:
+   - Single-project contexts (`ide`, `claude-code`, `grok`) start with the project already set and disable `activate_project` — do not call it there.
+   - Global contexts (the default `desktop-app`, Codex, Claude Desktop) require it: call `activate_project` with `{"project": "<name or path>"}` once at session start.
+   - `initial_instructions` provides the Serena Instructions Manual only for clients that do not already read it on connect; in clients whose setup carries the manual (e.g. Claude Code with the recommended setup), calling it is redundant.
+5. **Contexts and modes are the control plane**:
+   - `--context` sets the base toolset (`desktop-app` default = full set; `claude-code`, `ide`, `codex`, `grok`, `agent`, …). Modes (`planning`, `editing`, `interactive`, `one-shot`, `onboarding`, `no-onboarding`, `no-memories`, `query-projects`) refine it.
+   - In most configurations only a subset of tools is enabled at once, and tools marked *optional* are disabled by default. A missing tool usually means "disabled by context", not an install failure — check `get_current_config` first; it prints the active projects, tools, contexts, and modes.
 
 ---
 
@@ -49,12 +54,13 @@ Use Serena when semantic symbol awareness provides higher safety and efficiency 
 ### A. Exploration & Navigation
 | Tool | Purpose | Typical Use Case |
 | --- | --- | --- |
-| **`activate_project`** | Activates the target project directory. | Called once at session start (`{"project_path": "/path/to/repo"}`). |
+| **`activate_project`** | Activates a project by name or path. | Global contexts only, once at session start (`{"project": "/path/to/repo"}`); disabled in single-project contexts. |
+| **`get_current_config`** | Prints the active projects, tools, contexts, and modes. | First debugging step when a tool is missing. |
 | **`get_symbols_overview`** | Returns top-level symbols in a file. | Rapidly understanding a file's public interface and structure. |
 | **`find_symbol`** | Locates symbols matching a name pattern. | Finding definitions; use `depth=1` for members, `include_body=True` to read implementation. |
 | **`find_referencing_symbols`** | Finds all usages and call-sites of a symbol. | Pre-refactoring blast-radius analysis across the codebase. |
-| **`find_declaration`** | Jumps to symbol definition/declaration. | Resolving where an imported symbol originates. |
-| **`find_implementations`** | Finds concrete implementations of an interface/trait. | Inspecting polymorphic classes or handler implementations. |
+| **`find_declaration`** | Jumps to symbol definition/declaration. | Resolving where an imported symbol originates. Generally does not work for declarations in external dependencies. |
+| **`find_implementations`** | Finds concrete implementations of an interface/trait. | Inspecting polymorphic classes or handler implementations. Only available for some languages, limited by the language server. |
 | **`get_diagnostics_for_file`** | Fetches compiler/LSP diagnostics (errors/warnings). | Verifying type correctness after modifying code. |
 
 ### B. Atomic Refactoring & Editing
@@ -75,35 +81,52 @@ Use Serena when semantic symbol awareness provides higher safety and efficiency 
 | **`read_memory`** | Reads a stored project memory by key. | Retrieving architectural context across sessions. |
 | **`list_memories`** | Lists all persisted memory keys for the project. | Reviewing established project conventions. |
 
+Memories are project-specific `.serena/memories/*.md` files. Also available:
+`edit_memory`, `delete_memory` (only when explicitly instructed or permitted),
+`rename_memory` (updates references marked with the `mem:` prefix).
+
+### D. Also available (subset depends on context/mode)
+
+| Tool | Notes |
+| --- | --- |
+| **`onboarding`** | First-session project familiarization; creates project memories. |
+| **`serena_repl`** *(optional, BETA)* | One tool executing Python against Serena facades (`lsp.find_symbol(...)`, …). The biggest token saver for multi-step retrievals: only the result you actually need enters the context; intermediate results stay in the Python runtime. |
+| **`serena_info`** *(optional)* | Information on an advanced topic on demand, for context efficiency. |
+| **`execute_shell_command`**, **`create_text_file`**, **`find_file`**, **`list_dir`**, **`read_file`**, **`search_for_pattern`** | File, search, and shell utilities. In agentic harnesses these are typically disabled by default, since the harness already provides overlapping capabilities. |
+| **`get_diagnostics_for_symbol`** *(optional)*, **`restart_language_server`** *(optional)* | Symbol diagnostics; language-server restart. |
+| **`delete_lines`** / **`insert_at_line`** / **`replace_lines`** *(optional)* | Line-based edits; `delete_lines` and `replace_lines` require the exact range to have been read first via `read_file`. |
+| **`list_queryable_projects`** / **`query_project`** *(optional)* | Read-only queries against projects other than the current one. |
+| **`jet_brains_*`** *(optional)* | The JetBrains plugin backend (paid plugin, free trial): move, inline, type hierarchy, inspections, interactive debugging — exclusive to that backend, not the LSP one. |
+
 ---
 
 ## 4. Recommended Workflows
 
 ### 1. Token-Efficient Code Inspection
 ```
-1. `get_symbols_overview(relative_path="src/auth/service.ts")`
-   ──► Review list of classes, functions, and interfaces.
-2. `find_symbol(name_path_pattern="AuthService/login", relative_path="src/auth/service.ts", include_body=True)`
-   ──► Reads only the exact lines of the `login` method, saving context tokens.
+1. `get_symbols_overview(relative_path="src/auth/service.ts")` — file outline first.
+2. `find_symbol(name_path_pattern="AuthService/login", relative_path="src/auth/service.ts", include_body=True)` — only the lines of the method you will touch.
 ```
+Standing rule: overview first, bodies only for symbols you will touch.
 
 ### 2. Safe Cross-File Refactoring
 ```
-1. `find_referencing_symbols(name_path_pattern="OldService/fetchUser")`
-   ──► Inspect all call sites across the project.
-2. `rename_symbol(name_path_pattern="OldService/fetchUser", new_name="getUserProfile")`
-   ──► Serena updates declaration, imports, and all call sites in one atomic operation.
-3. `get_diagnostics_for_file(relative_path="src/controllers/user.ts")`
-   ──► Confirm zero compiler diagnostics or type errors remain.
+1. `find_referencing_symbols(name_path_pattern="OldService/fetchUser")` — blast radius first.
+2. `rename_symbol(name_path_pattern="OldService/fetchUser", new_name="getUserProfile")` — declaration, imports, and call sites update atomically.
+3. `get_diagnostics_for_file(relative_path="src/controllers/user.ts")` — confirm zero diagnostics remain.
 ```
 
 ---
 
 ## 5. Installation & Client Setup
 
-Serena is written in Python and installed locally via **`uv tool install`** for zero-latency local execution without git checks on startup.
+Serena is written in Python and installed locally via **`uv tool install`**
+for zero-latency local execution without git checks on startup. Serena itself
+is GPL-3.0-or-later (its SolidLSP component is MIT); this skill file is MIT
+like the rest of this repo. **Do not install Serena via an MCP or plugin
+marketplace** — those carry outdated and suboptimal installation commands.
 
-### Prerequisites & Local Installation
+### Prerequisites, install & initialise
 ```bash
 # 1. Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -111,52 +134,75 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 2. Install Serena locally (places binary in ~/.local/bin/serena)
 uv tool install -p 3.13 serena-agent
 
-# Or from GitHub source:
-# uv tool install git+https://github.com/oraios/serena
+# 3. Initialise (default: language-server backend; add -b JetBrains for the plugin backend)
+serena init
 ```
 
-### Starting Serena Standalone
+Some languages need extra dependencies for their language server (e.g. gopls
+for Go, rust-analyzer via rustup for Rust). For larger projects, index the
+project first (`serena project index` from the project directory) — otherwise
+the first tool call can be very slow.
+
+### Client configurations — the `--context` flag is mandatory knowledge
+
+The context selects the toolset; omitting it silently loads the default
+`desktop-app` full set everywhere. Recommended path for Claude Code is simply
+`serena setup claude-code`.
+
+Claude Code, global (all projects):
+
 ```bash
-serena start-mcp-server --open-web-dashboard=False --project /path/to/project
+claude mcp add --scope user serena -- serena start-mcp-server --context claude-code --project-from-cwd
 ```
 
-### MCP Client Configurations
+Claude Code, per project:
 
-#### Cursor / Claude Desktop / VS Code (`mcpServers`)
+```bash
+claude mcp add serena -- serena start-mcp-server --context claude-code --project "$(pwd)"
+```
+
+VS Code, global (then prompt "Activate the current dir as project using
+serena" at session start — VS Code cannot auto-activate in this setting):
+
+```bash
+serena start-mcp-server --context=vscode
+```
+
+VS Code, workspace (auto-activates the open project):
+
+```bash
+serena start-mcp-server --context=vscode --project ${workspaceFolder}
+```
+
+Claude Desktop / other global-config clients (activation required, see §2):
+
 ```json
 {
   "mcpServers": {
     "serena": {
       "command": "serena",
-      "args": [
-        "start-mcp-server",
-        "--open-web-dashboard=False",
-        "--project-from-cwd"
-      ]
+      "args": ["start-mcp-server", "--context=desktop-app"]
     }
   }
 }
 ```
 
-#### VS Code (`.vscode/mcp.json` - Native Schema)
-```json
-{
-  "servers": {
-    "serena": {
-      "command": "serena",
-      "args": [
-        "start-mcp-server",
-        "--open-web-dashboard=False",
-        "--project-from-cwd"
-      ]
-    }
-  }
-}
-```
+IDEs generally (Cursor, Cline, Windsurf): use `--context ide` to reduce tool
+duplication with the IDE's own tools.
 
-#### Claude Code CLI
+Starting Serena standalone:
+
 ```bash
-claude mcp add serena -- serena start-mcp-server --open-web-dashboard=False --project-from-cwd
+serena start-mcp-server --open-web-dashboard False --project /path/to/project
 ```
 
-*(Note: If running ephemerally without installing locally, substitute `uvx --from git+https://github.com/oraios/serena serena` for `serena`).*
+If running ephemerally without installing locally, substitute
+`uvx --from git+https://github.com/oraios/serena serena` for `serena`.
+
+### Keep Serena working in long sessions
+
+Claude Code and VS Code users should set up the reminder hooks
+(`serena-hooks remind`, `activate`, `cleanup`, plus `auto-approve` for Claude
+Code) — agents otherwise stop using Serena's tools in long sessions or after
+dynamic tool loading (agent drift). If Serena is slow to start under Claude
+Code, set `MCP_TIMEOUT` higher (e.g. `export MCP_TIMEOUT=60000`).

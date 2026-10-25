@@ -22,21 +22,7 @@ With a **384K token context window** (`393,216` tokens) and native support for u
 ### Judgments from Snap, Decisions in Code
 Integrations work best when Snap provides calibrated judgments and your application code decides what to do with them.
 
-```
-┌─────────────────────────────────┐
-│ Application State / Diffs / UI  │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│     Snap Typed Judgments        │ ──► [Noul: 0.94, Choice: "pass", Score: 4/5]
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│    Code Decision Logic          │ ──► Execute action, fail gate, or escalate
-└─────────────────────────────────┘
-```
+`State / diffs / UI → Snap typed judgments (noul, choice, score) → code decision logic (act, fail gate, escalate)`
 
 - **Avoid asking Snap to make business policy decisions**: Rather than asking *"Should we block this deploy?"*, ask atomic judgment questions: *"Does this diff introduce any unhandled promise rejections?"* or *"Does this changeset violate the error boundary contract?"*.
 - **Represent logic in code**: Code holds the truth table that maps probabilities to actions. This keeps decision logic testable, versioned, and deterministic.
@@ -71,7 +57,7 @@ Snap's 384K context window allows passing entire pull request diffs, multiple re
 - Include test files alongside implementation diffs to verify test coverage matches modified code.
 
 ### B. Visual Multimodal Comparison (Up to 4 Images)
-Images travel as a separate top-level `images` parameter on any tool call, not embedded in the state: an array of up to 4 objects of the form `{ "mediaType": "image/png" | "image/jpeg" | "image/webp", "base64": "..." }`, with plain base64 and no `data:` prefix. Each image must decode to at most 4 MiB, 8 MiB in total, and every question in the request sees every image:
+Images travel as a separate top-level `images` parameter on any tool call, not embedded in the state: an array of up to 4 objects of the form `{ "mediaType": "image/png" | "image/jpeg" | "image/webp", "base64": "..." }`, with plain base64 and no `data:` prefix. Each image must decode to at most 4 MiB, 8 MiB in total, and every question in the request sees every image. Each image costs only about 64–256 image tokens, not the base64 text, so images are cheap against the 384K window. Video is not supported — sample up to 4 frames and send them as images:
 - **Visual Regression**: Compare `baseline_screenshot` against `candidate_screenshot`.
 - **Figma to Code Verification**: Compare `design_mockup` against `rendered_component`.
 - **State Progression**: Compare initial state, loading skeleton, and populated UI.
@@ -148,6 +134,8 @@ Evaluates multiple questions against a single shared state efficiently in one pa
 ### 5. `snap_list_models` (Available Models)
 Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.1`; note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
 
+Error notes: `402` = out of credits; `422` = invalid request or bad image (wrong mediaType, `data:` prefix, more than 4 images, more than 8 MiB total, bytes not matching mediaType); `429` = rate limited; `400` = over the token limit or a request the model rejects. Errors arrive as `{ detail: { error_type, message } }`.
+
 ### 6. Multimodal Visual Comparison Request Example
 A `snap_noul` call with images as a top-level parameter (plain base64, no `data:` prefix; up to 4 images, 4 MiB each, 8 MiB total):
 ```json
@@ -193,8 +181,7 @@ Snap is a hosted decision model service:
 
 - 🚩 **Prompt Gymnastics**: Never write conversational preambles ("Please act as a senior developer and carefully examine..."). Snap is a decision model; write concise, factual criteria.
 - 🚩 **Double-Barreled Questions**: Avoid questions joined with "and/or" (e.g. *"Is this code clean and accessible?"*). Split into two independent questions: one for architecture, one for accessibility.
-- 🚩 **Assuming Confidence Equals Correctness**: Calibrated probability indicates distribution sharpness. Always check the actual probability value against your code threshold.
-- 🚩 **Ignoring Uncertain Bands**: Never treat `0.55` as a solid "Yes". Values in the `0.50–0.80` range require verification or escalation.
+- 🚩 **Assuming Confidence Equals Correctness**: Calibrated probability indicates distribution sharpness. Always check the actual probability value against your code threshold (and the 0.50–0.80 uncertain band above — never treat `0.55` as a solid "Yes").
 
 ---
 
