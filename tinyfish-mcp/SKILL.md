@@ -33,9 +33,10 @@ their full documentation in tokens on every read.
 | No URL yet, need information or URLs | `search` (§2A, the detailed section) |
 | URL in hand, need only its content | `fetch_content` (§2B, compact) |
 | Need to click, log in, fill forms, or interact | `run_web_automation` (§2C, compact) |
-| Need raw programmatic browser control (Playwright/Puppeteer/Selenium) | `create_browser_session` (§2D, compact) |
-| Need to watch a topic or page on a schedule | `create_monitor` (§2D, compact) |
-| Need an explicit multi-source cited report, not a quick answer | `start_deep_research` (§2D, compact) |
+| Need raw programmatic browser control (Playwright/Puppeteer/Selenium) | `create_browser_session` (§2C, compact) |
+| Need to watch a topic or page on a schedule | `create_monitor` (§2C, compact) |
+| Need an explicit multi-source cited report, not a quick answer | `start_deep_research` (§2C, compact) |
+| Need a table of many entities with the same fields, filled from the web | `create_dataset` (§2C, compact) |
 
 Quick questions stay on `search` / `fetch_content`. Do not reach for automation,
 browser sessions, or deep research when a search and a fetch answer the question.
@@ -98,11 +99,28 @@ it returns metadata only.
   Profiles must be created via the API or dashboard first.
 - **Deep research — first 2 completed runs per UTC day free, then $2 (Deep) /
   $3 (Max).** `start_deep_research` takes `query` and optional `mode`
-  (`"deep"` default | `"max"`); it returns a `research_run_id` immediately.
-  Poll `get_deep_research` (waits about 25 seconds) through `QUEUED` /
-  `RUNNING` until `COMPLETED` (report + citations), `FAILED`, `CANCELLED`, or
-  `TIMED_OUT`. Runs take several minutes, at most 5 at once.
-  `cancel_deep_research` stops one. For quick questions, stay on search/fetch.
+  (`"deep"` default | `"max"`); it returns a `research_run_id` and a
+  `report_url` immediately. Poll `get_deep_research` (waits about 25 seconds)
+  through `QUEUED` / `RUNNING` until `COMPLETED` (report + citations),
+  `FAILED`, `CANCELLED`, or `TIMED_OUT`. Runs take several minutes, at most 5
+  at once. `cancel_deep_research` stops one. `list_deep_research` lists runs,
+  newest first, with status and `report_url` (filter by status, text, or date;
+  page with `cursor`). For quick questions, stay on search/fetch.
+- **Datasets (beta) — listed at $0.10 per complete row added, including the
+  run's Search and Fetch; incomplete, skipped, and failed rows are free.**
+  `create_dataset` builds a table of many entities with the same fields
+  (`prompt`, or a `spec` from `plan_dataset`, plus optional `target_rows`
+  1–250, default 100); it returns a `dataset_id` and `run_id` immediately.
+  `plan_dataset` designs the columns without creating anything. Poll
+  `get_dataset` (waits about 25 seconds) through `populating` until `ready`,
+  `empty`, `failed`, or `cancelled`; `get_dataset_rows` pages rows (up to 500,
+  previous `next_cursor` as `after`); `list_datasets` lists runs newest first.
+  `populate_dataset` refills a dataset (raise `target_rows` to add rows, or
+  `reset` to rebuild; refused while a run is live). `cancel_dataset_run`
+  stops a run (rows already added stay); `delete_dataset` deletes a dataset
+  and its rows (cancel any live run first). Beta cap: 3 runs per rolling 24
+  hours per account — the docs also describe beta runs as free despite the
+  listed row rate, so confirm in the wallet before a large run.
 - **Monitors — $0.005 per completed run (failed runs free), plus its
   search/fetch.** `create_monitor` with `type: "search"` + `config.query` or
   `type: "fetch"` + `config.url`; `schedule_cron` is a 5-field cron, UTC
@@ -122,11 +140,14 @@ it returns metadata only.
   flow: challenge, then paid credential); accounts outside the rollout do not
   see it, and calling it returns `Unknown tool: top_up_wallet`.
 
-Full inventory (26 tools): Web Automation: `run_web_automation`,
+Full inventory (35 tools): Web Automation: `run_web_automation`,
 `run_web_automation_async`, `get_run`, `list_runs`, `cancel_run`. Batch:
 `batch_status`, `batch_cancel`. Search: `search`, `get_search_usage`.
 Extraction: `fetch_content`, `list_fetch_usage`. Deep Research:
-`start_deep_research`, `get_deep_research`, `cancel_deep_research`. Monitors:
+`start_deep_research`, `get_deep_research`, `list_deep_research`,
+`cancel_deep_research`. Datasets: `create_dataset`, `plan_dataset`,
+`get_dataset`, `get_dataset_rows`, `list_datasets`, `populate_dataset`,
+`cancel_dataset_run`, `delete_dataset`. Monitors:
 `create_monitor`, `list_monitors`, `get_monitor`, `pause_monitor`,
 `resume_monitor`, `run_monitor`, `cancel_monitor`. Browser Sessions:
 `create_browser_session`, `list_browser_sessions`, `close_browser_session`.
@@ -138,9 +159,10 @@ Wallet: `get_wallet`, `top_up_wallet`.
 
 - **Free vs. metered is the first decision.** `search` and `fetch_content`
   cost nothing; everything in §2C draws from the wallet (except the daily
-  deep-research allowance and free failed monitor runs). Never call a metered
+  deep-research allowance and free failed monitor runs; datasets have their
+  own beta terms in §2C). Never call a metered
   tool when a free one answers the question, and check `get_wallet` before a
-  long automation or research run.
+  long automation, research, or dataset run.
 - **Batch, don't serialize.** One `fetch_content` call takes up to 10 URLs;
   `batch_status` covers up to 8 runs. There is no official sequential-only
   rule — batching is the documented pattern.
