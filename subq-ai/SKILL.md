@@ -57,7 +57,7 @@ Snap's 384K context window allows passing entire pull request diffs, multiple re
 - Include test files alongside implementation diffs to verify test coverage matches modified code.
 
 ### B. Visual Multimodal Comparison (Up to 4 Images)
-Images travel as a separate top-level `images` parameter on any tool call, not embedded in the state: an array of up to 4 objects of the form `{ "mediaType": "image/png" | "image/jpeg" | "image/webp", "base64": "..." }`, with plain base64 and no `data:` prefix. Each image must decode to at most 4 MiB, 8 MiB in total, and every question in the request sees every image. Each image costs only about 64–256 image tokens, not the base64 text, so images are cheap against the 384K window. Video is not supported — sample up to 4 frames and send them as images:
+Images travel as a separate top-level `images` parameter on any tool call, not embedded in the state: an array of up to 4 objects of the form `{ "mediaType": "image/png" | "image/jpeg" | "image/webp", "base64": "..." }`, with plain base64 and no `data:` prefix. Each image must decode to at most 4 MiB, 8 MiB in total, and every question in the request sees every image. Each image costs 66 to about 1,600 input tokens, set by resolution rather than file size — downscale anything above about 1.6 megapixels to cut the cost — so images stay cheap against the 384K window, since the cost is tokens, not the base64 text. Video is not supported — sample up to 4 frames and send them as images:
 - **Visual Regression**: Compare `baseline_screenshot` against `candidate_screenshot`.
 - **Figma to Code Verification**: Compare `design_mockup` against `rendered_component`.
 - **State Progression**: Compare initial state, loading skeleton, and populated UI.

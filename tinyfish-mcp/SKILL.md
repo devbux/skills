@@ -100,7 +100,11 @@ it returns metadata only.
 - **Deep research — first 2 completed runs per UTC day free, then $2 (Deep) /
   $3 (Max).** `start_deep_research` takes `query` and optional `mode`
   (`"deep"` default | `"max"`); it returns a `research_run_id` and a
-  `report_url` immediately. Poll `get_deep_research` (waits about 25 seconds)
+  `report_url` immediately. Follow-ups pass `prior_run_id` (reuse a completed
+  report) or `session_id` (continue a session) — mutually exclusive, each a
+  new run priced the same way; `domain_filter` (`include` prioritizes,
+  `exclusive` restricts, `block` excludes; up to 150 domains each) scopes
+  sources. Poll `get_deep_research` (waits about 25 seconds)
   through `QUEUED` / `RUNNING` until `COMPLETED` (report + citations),
   `FAILED`, `CANCELLED`, or `TIMED_OUT`. Runs take several minutes, at most 5
   at once. `cancel_deep_research` stops one. `list_deep_research` lists runs,
@@ -118,16 +122,17 @@ it returns metadata only.
   `populate_dataset` refills a dataset (raise `target_rows` to add rows, or
   `reset` to rebuild; refused while a run is live). `cancel_dataset_run`
   stops a run (rows already added stay); `delete_dataset` deletes a dataset
-  and its rows (cancel any live run first). Beta cap: 3 runs per rolling 24
-  hours per account — the docs also describe beta runs as free despite the
-  listed row rate, so confirm in the wallet before a large run.
+  and its rows (cancel any live run first). Up to 3 runs going at once;
+  confirm in the wallet before a large run.
 - **Monitors — $0.005 per completed run (failed runs free), plus its
   search/fetch.** `create_monitor` with `type: "search"` + `config.query` or
   `type: "fetch"` + `config.url`; `schedule_cron` is a 5-field cron, UTC
   unless prefixed with `CRON_TZ=<zone>`. Creation returns a baseline result
   immediately. Manage with `list_monitors`, `get_monitor`, `pause_monitor`,
   `resume_monitor`, `run_monitor` (run once now), `cancel_monitor` (deletes
-  it). Optional: `name`, `webhook_url`, `purpose`.
+  it). `update_monitor` changes `schedule_cron`, `name`, `webhook_url`, or
+  `purpose` (the query or URL cannot change; omitted fields keep their
+  values, `null` clears `name`, `webhook_url`, or `purpose`). Optional: `name`, `webhook_url`, `purpose`.
 - **Browser sessions — $0.002 per browser-minute.**
   `create_browser_session` returns CDP details for Playwright, Puppeteer, or
   Selenium; `list_browser_sessions` filters by session ID, time range, and
@@ -140,7 +145,7 @@ it returns metadata only.
   flow: challenge, then paid credential); accounts outside the rollout do not
   see it, and calling it returns `Unknown tool: top_up_wallet`.
 
-Full inventory (35 tools): Web Automation: `run_web_automation`,
+Full inventory (36 tools): Web Automation: `run_web_automation`,
 `run_web_automation_async`, `get_run`, `list_runs`, `cancel_run`. Batch:
 `batch_status`, `batch_cancel`. Search: `search`, `get_search_usage`.
 Extraction: `fetch_content`, `list_fetch_usage`. Deep Research:
@@ -149,7 +154,7 @@ Extraction: `fetch_content`, `list_fetch_usage`. Deep Research:
 `get_dataset`, `get_dataset_rows`, `list_datasets`, `populate_dataset`,
 `cancel_dataset_run`, `delete_dataset`. Monitors:
 `create_monitor`, `list_monitors`, `get_monitor`, `pause_monitor`,
-`resume_monitor`, `run_monitor`, `cancel_monitor`. Browser Sessions:
+`resume_monitor`, `run_monitor`, `cancel_monitor`, `update_monitor`. Browser Sessions:
 `create_browser_session`, `list_browser_sessions`, `close_browser_session`.
 Wallet: `get_wallet`, `top_up_wallet`.
 
