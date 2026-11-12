@@ -3,7 +3,7 @@ name: subq-ai
 license: MIT
 description: >
   SubQ integration craft for high-capacity System One decision models, specifically SubQ Snap
-  (subq-snap-1.1). Snap answers typed questions with calibrated probabilities over large context
+  (subq-snap-1.2). Snap answers typed questions with calibrated probabilities over large context
   windows (up to 384K tokens) and multimodal visual inputs (up to 4 images). Use when verifying
   large code diffs, refereeing complex architecture, comparing visual before/after screenshots,
   or building structured, deterministic decision logic in automated software workflows.
@@ -11,7 +11,7 @@ description: >
 
 # Build with SubQ AI (Snap)
 
-SubQ's **Snap** (`subq-snap-1.1`) is a high-capacity **System One decision model**. Like other decision models, Snap does not generate conversational chat prose. Instead, it accepts an application **state** (large multi-file code diffs, logs, documents, or base64 screenshots) along with **typed questions**, returning structured answers backed by **calibrated probabilities**.
+SubQ's **Snap** (`subq-snap-1.2`) is a high-capacity **System One decision model**. Like other decision models, Snap does not generate conversational chat prose. Instead, it accepts an application **state** (large multi-file code diffs, logs, documents, or base64 screenshots) along with **typed questions**, returning structured answers backed by **calibrated probabilities**.
 
 With a **384K token context window** (`393,216` tokens) and native support for up to **4 high-resolution images**, Snap acts as an impartial, high-capacity referee capable of evaluating whole modules, extensive pull request diffs, and visual UI comparisons that exceed smaller model limits.
 
@@ -132,7 +132,7 @@ Evaluates multiple questions against a single shared state efficiently in one pa
 ```
 
 ### 5. `snap_list_models` (Available Models)
-Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.1`; note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
+Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.2` (`subq-snap-1.1` is deprecated and retires November 25, 2026); note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
 
 Error notes: `402` = out of credits; `422` = invalid request or bad image (wrong mediaType, `data:` prefix, more than 4 images, more than 8 MiB total, bytes not matching mediaType); `429` = rate limited; `400` = over the token limit or a request the model rejects. Errors arrive as `{ detail: { error_type, message } }`.
 
