@@ -132,7 +132,7 @@ Evaluates multiple questions against a single shared state efficiently in one pa
 ```
 
 ### 5. `snap_list_models` (Available Models)
-Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.2` (`subq-snap-1.1` is deprecated and retires November 25, 2026); note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
+Takes no parameters. Lists the model IDs available to the configured SubQ API key (GET `/v1/models`, OpenAI-compatible shape). Use a returned id with the `model` parameter on any tool above when you need something other than the default `subq-snap-1.2` (`subq-snap-1.1` retired November 11, 2026; requests using it now route to 1.2); note that the Decisions tools need a decision model, not the separate `subq-preview` chat model.
 
 Error notes: `402` = out of credits; `422` = invalid request or bad image (wrong mediaType, `data:` prefix, more than 4 images, more than 8 MiB total, bytes not matching mediaType); `429` = rate limited; `400` = over the token limit or a request the model rejects. Errors arrive as `{ detail: { error_type, message } }`.
 
