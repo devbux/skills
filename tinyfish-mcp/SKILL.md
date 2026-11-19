@@ -4,7 +4,7 @@ license: MIT
 description: >
   Live web search, webpage extraction, browser automation, monitors, and deep research
   using the TinyFish MCP server (search, fetch_content, run_web_automation,
-  start_deep_research, monitors, wallet). Search and fetch are free; automation,
+  run_deep_research_async, monitors, wallet). Search and fetch are free; automation,
   browser sessions, monitors, and deep research beyond the daily free allowance
   draw from the wallet, so know the rates before calling them. Completely
   standalone and works with any AI coding assistant or harness.
@@ -35,7 +35,7 @@ their full documentation in tokens on every read.
 | Need to click, log in, fill forms, or interact | `run_web_automation` (§2C, compact) |
 | Need raw programmatic browser control (Playwright/Puppeteer/Selenium) | `create_browser_session` (§2C, compact) |
 | Need to watch a topic or page on a schedule | `create_monitor` (§2C, compact) |
-| Need an explicit multi-source cited report, not a quick answer | `start_deep_research` (§2C, compact) |
+| Need an explicit multi-source cited report, not a quick answer | `run_deep_research_async` (§2C, compact) |
 | Need a table of many entities with the same fields, filled from the web | `create_dataset` (§2C, compact) |
 
 Quick questions stay on `search` / `fetch_content`. Do not reach for automation,
@@ -98,7 +98,7 @@ it returns metadata only.
   `use_vault: true` to repair stale sessions with saved credentials.
   Profiles must be created via the API or dashboard first.
 - **Deep research — first 2 completed runs per UTC day free, then $2 (Deep) /
-  $3 (Max).** `start_deep_research` takes `query` and optional `mode`
+  $3 (Max).** `run_deep_research_async` takes `query` and optional `mode`
   (`"deep"` default | `"max"`); it returns a `research_run_id` and a
   `report_url` immediately. Follow-ups pass `prior_run_id` (reuse a completed
   report) or `session_id` (continue a session) — mutually exclusive, each a
@@ -149,7 +149,7 @@ Full inventory (36 tools): Web Automation: `run_web_automation`,
 `run_web_automation_async`, `get_run`, `list_runs`, `cancel_run`. Batch:
 `batch_status`, `batch_cancel`. Search: `search`, `get_search_usage`.
 Extraction: `fetch_content`, `list_fetch_usage`. Deep Research:
-`start_deep_research`, `get_deep_research`, `list_deep_research`,
+`run_deep_research_async`, `get_deep_research`, `list_deep_research`,
 `cancel_deep_research`. Datasets: `create_dataset`, `plan_dataset`,
 `get_dataset`, `get_dataset_rows`, `list_datasets`, `populate_dataset`,
 `cancel_dataset_run`, `delete_dataset`. Monitors:
