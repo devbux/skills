@@ -5,8 +5,8 @@ description: >
   Live web search, webpage extraction, browser automation, monitors, and deep research
   using the TinyFish MCP server (search, fetch_content, run_web_automation,
   run_deep_research_async, monitors, wallet). Search and fetch are free; automation,
-  browser sessions, monitors, and deep research beyond the daily free allowance
-  draw from the wallet, so know the rates before calling them. Completely
+  browser sessions, monitors, and deep research draw from the wallet, so know
+  the rates before calling them. Completely
   standalone and works with any AI coding assistant or harness.
 ---
 
@@ -97,8 +97,7 @@ it returns metadata only.
   `profile_id` to select one (requires `use_profile: true`), paired with
   `use_vault: true` to repair stale sessions with saved credentials.
   Profiles must be created via the API or dashboard first.
-- **Deep research — first 2 completed runs per UTC day free, then $2 (Deep) /
-  $3 (Max).** `run_deep_research_async` takes `query` and optional `mode`
+- **Deep research — $2 (Deep) / $3 (Max) per completed run.** `run_deep_research_async` takes `query` and optional `mode`
   (`"deep"` default | `"max"`); it returns a `research_run_id` and a
   `report_url` immediately. Follow-ups pass `prior_run_id` (reuse a completed
   report) or `session_id` (continue a session) — mutually exclusive, each a
@@ -163,9 +162,8 @@ Wallet: `get_wallet`, `top_up_wallet`.
 ## 3. Rules that save money and tokens
 
 - **Free vs. metered is the first decision.** `search` and `fetch_content`
-  cost nothing; everything in §2C draws from the wallet (except the daily
-  deep-research allowance and free failed monitor runs; datasets have their
-  own beta terms in §2C). Never call a metered
+  cost nothing; everything in §2C draws from the wallet (except free failed
+  monitor runs; datasets have their own beta terms in §2C). Never call a metered
   tool when a free one answers the question, and check `get_wallet` before a
   long automation, research, or dataset run.
 - **Batch, don't serialize.** One `fetch_content` call takes up to 10 URLs;
